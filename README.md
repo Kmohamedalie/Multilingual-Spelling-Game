@@ -1,2 +1,1 @@
-# Multilingual-Spelling-Game
-Multilingual Spelling Game 
+This game was built using Gemini!
