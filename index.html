@@ -51,7 +51,7 @@
 
     <div id="userIdDisplay" class="hidden">User ID: <span id="userIdValue"></span></div>
 
-    <div id="loadingIndicator" class="text-center p-10">
+    <div id="loadingIndicator" class="text-center p-10 w-full">
         <svg class="animate-spin h-10 w-10 text-sky-600 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
             <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
@@ -162,7 +162,7 @@
         const userIdValue = document.getElementById('userIdValue');
 
         // Game Configuration
-        const WORDS_PER_GAME = 15; // << UPDATED FROM 10 to 15
+        const WORDS_PER_GAME = 15; 
         const wordsData = {
             en: { name: "English", langCode: "en-US", list: ["apple", "banana", "computer", "elephant", "guitar", "language", "mountain", "ocean", "programming", "sunshine", "beautiful", "adventure", "knowledge", "restaurant", "calendar", "technology", "environment", "communication", "opportunity", "experience", "vocabulary", "dictionary", "umbrella", "vacation", "celebration"] },
             es: { name: "Español", langCode: "es-ES", list: ["manzana", "plátano", "computadora", "elefante", "guitarra", "idioma", "montaña", "océano", "programación", "sol", "hermoso", "aventura", "conocimiento", "restaurante", "calendario", "tecnología", "ambiente", "comunicación", "oportunidad", "experiencia", "vocabulario", "diccionario", "paraguas", "vacaciones", "celebración"] },
@@ -185,13 +185,58 @@
         let db, auth, userId, app;
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-spelling-game';
 
+        function alertUser(message) {
+            console.warn("ALERT USER:", message);
+            let alertBox = document.getElementById('customAlertBox');
+            if (!alertBox) {
+                alertBox = document.createElement('div');
+                alertBox.id = 'customAlertBox';
+                alertBox.className = "fixed top-3 left-1/2 -translate-x-1/2 bg-red-600 bg-opacity-90 text-white px-5 py-3 rounded-lg shadow-lg text-sm z-[1001] transition-opacity duration-500 ease-out opacity-0";
+                document.body.appendChild(alertBox);
+            }
+            alertBox.textContent = message;
+            
+            requestAnimationFrame(() => {
+                alertBox.classList.remove('opacity-0');
+                alertBox.classList.add('opacity-100');
+            });
+
+            if (alertBox.hideTimeout) clearTimeout(alertBox.hideTimeout);
+            if (alertBox.removeTimeout) clearTimeout(alertBox.removeTimeout);
+
+            alertBox.hideTimeout = setTimeout(() => {
+                alertBox.classList.remove('opacity-100');
+                alertBox.classList.add('opacity-0');
+                alertBox.removeTimeout = setTimeout(() => {
+                    if (alertBox.parentNode) {
+                        alertBox.parentNode.removeChild(alertBox);
+                    }
+                }, 500); 
+            }, 5000);
+        }
+
+
         async function initFirebase() {
             try {
                 const firebaseConfigStr = typeof __firebase_config !== 'undefined' ? __firebase_config : null;
                 if (!firebaseConfigStr) {
                     console.error("Firebase config not found.");
                     alertUser("Critical Error: Firebase configuration is missing. The game cannot save scores.");
-                    loadingIndicator.innerHTML = "<p class='text-red-500'>Error: Firebase config missing. Scores cannot be saved.</p>";
+                    loadingIndicator.innerHTML = `
+                        <div class="bg-red-100 border-l-4 border-red-500 text-red-700 p-6 rounded-md shadow-md w-full max-w-lg mx-auto">
+                            <div class="flex items-center">
+                                <div class="flex-shrink-0">
+                                    <svg class="h-10 w-10 text-red-500 mr-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                    </svg>
+                                </div>
+                                <div class="text-left">
+                                    <p class="font-bold text-xl mb-1">Critical Application Error</p>
+                                    <p class="text-md">The game cannot start correctly because essential configuration (Firebase) is missing.</p>
+                                    <p class="text-sm mt-2 text-slate-600">Scores and progress cannot be saved. If you are seeing this on a platform, please report it. If running locally, ensure Firebase is configured.</p>
+                                </div>
+                            </div>
+                        </div>`;
                     return false;
                 }
                 const firebaseConfig = JSON.parse(firebaseConfigStr);
@@ -199,16 +244,15 @@
                 app = initializeApp(firebaseConfig);
                 db = getFirestore(app);
                 auth = getAuth(app);
-                setLogLevel('debug'); // For Firebase Firestore logging
+                setLogLevel('debug'); 
 
-                await setPersistence(auth, browserLocalPersistence); // Persist auth state
+                await setPersistence(auth, browserLocalPersistence); 
 
                 return new Promise((resolve) => {
                     onAuthStateChanged(auth, async (user) => {
                         if (user) {
                             userId = user.uid;
                         } else {
-                            // If no user, try to sign in with custom token or anonymously
                             if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
                                 await signInWithCustomToken(auth, __initial_auth_token);
                                 userId = auth.currentUser?.uid;
@@ -217,7 +261,7 @@
                                 userId = auth.currentUser?.uid;
                             }
                         }
-                        if (!userId) userId = crypto.randomUUID(); // Fallback if all else fails
+                        if (!userId) userId = crypto.randomUUID(); 
 
                         userIdValue.textContent = userId;
                         userIdDisplay.classList.remove('hidden');
@@ -229,7 +273,21 @@
             } catch (error) {
                 console.error("Firebase initialization error:", error);
                 alertUser(`Firebase Error: ${error.message}. Scores might not be saved.`);
-                loadingIndicator.innerHTML = `<p class='text-red-500'>Error initializing Firebase: ${error.message}. Scores may not save.</p>`;
+                loadingIndicator.innerHTML = `
+                    <div class="bg-red-100 border-l-4 border-red-500 text-red-700 p-6 rounded-md shadow-md w-full max-w-lg mx-auto">
+                        <div class="flex items-center">
+                            <div class="flex-shrink-0">
+                                <svg class="h-10 w-10 text-red-500 mr-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                </svg>
+                            </div>
+                            <div class="text-left">
+                                <p class="font-bold text-xl mb-1">Firebase Initialization Error</p>
+                                <p class="text-md">${error.message}</p>
+                                <p class="text-sm mt-2 text-slate-600">Scores and progress might not be saved correctly.</p>
+                            </div>
+                        </div>
+                    </div>`;
                 return false;
             }
         }
@@ -248,10 +306,7 @@
             if (voices.length === 0 && 'onvoiceschanged' in synth) {
                 synth.onvoiceschanged = () => {
                     voices = synth.getVoices();
-                     // console.log("Voices loaded (onvoiceschanged):", voices.length);
                 };
-            } else {
-                // console.log("Voices loaded immediately:", voices.length);
             }
         }
 
@@ -261,40 +316,27 @@
                 return;
             }
             if (synth.speaking) {
-                synth.cancel(); // Cancel previous speech if any
+                synth.cancel();
             }
             
             const utterance = new SpeechSynthesisUtterance(word);
-            // Try to find a voice for the specific language code
             let voice = voices.find(v => v.lang === langCode);
-            // If not found, try to find a voice for the base language (e.g., 'en' for 'en-US')
-            if (!voice) {
-                voice = voices.find(v => v.lang.startsWith(langCode.split('-')[0]));
-            }
-            // If still not found, try a more generic match (e.g. 'en' for 'en-GB' if 'en-US' was requested)
+            if (!voice) voice = voices.find(v => v.lang.startsWith(langCode.split('-')[0]));
             if (!voice && voices.length > 0) {
                 const baseLang = langCode.split('-')[0];
-                voice = voices.find(v => v.lang.startsWith(baseLang) && v.default); // Prefer default for the base language
-                if (!voice) {
-                     voice = voices.find(v => v.lang.startsWith(baseLang)); // Any voice for the base language
-                }
+                voice = voices.find(v => v.lang.startsWith(baseLang) && v.default);
+                if (!voice) voice = voices.find(v => v.lang.startsWith(baseLang));
             }
 
-            if (voice) {
-                utterance.voice = voice;
-                // console.log(`Using voice: ${voice.name} for lang: ${langCode}`);
-            } else {
-                console.warn(`No specific voice found for language: ${langCode}. Using browser default for this language.`);
-                 // We still set the lang property on utterance, browser might pick a suitable default
-            }
+            if (voice) utterance.voice = voice;
             utterance.lang = langCode; 
             utterance.pitch = 1;
-            utterance.rate = 0.9; // Slightly slower for clarity
+            utterance.rate = 0.9;
             
             utterance.onerror = (event) => {
                 console.error('SpeechSynthesisUtterance.onerror', event);
                 alertUser(`Could not speak the word. Error: ${event.error}. Please try again or check your browser's speech settings.`);
-                 feedbackArea.textContent = `Error speaking word. Try typing: ${word}`; // Fallback
+                 feedbackArea.textContent = `Error speaking word. Try typing: ${word}`; 
                  feedbackArea.className = 'feedback-incorrect';
             };
             synth.speak(utterance);
@@ -315,7 +357,7 @@
                 }
             } catch (error) {
                 console.error("Error loading best score:", error);
-                currentBestScore = 0; // Default on error
+                currentBestScore = 0; 
                 alertUser("Could not load your best score for this language.");
             }
             bestScoreDisplay.textContent = currentBestScore;
@@ -337,22 +379,22 @@
             try {
                 const docSnap = await getDoc(scoreRef);
                 if (docSnap.exists()) {
-                    if (currentScore > (docSnap.data().bestScore || 0) ) { // Only update if current score is truly higher
+                    if (currentScore > (docSnap.data().bestScore || 0) ) { 
                          await updateDoc(scoreRef, { bestScore: currentScore, lastPlayed: serverTimestamp() });
                          console.log("Best score updated in Firestore.");
-                    } else if (!docSnap.data().lastPlayed) { // If lastPlayed is missing, update it
+                    } else if (!docSnap.data().lastPlayed) { 
                         await updateDoc(scoreRef, { lastPlayed: serverTimestamp() });
                     }
                 } else {
                      await setDoc(scoreRef, { 
                         bestScore: currentScore, 
                         language: wordsData[currentLanguageKey].name, 
-                        langKey: currentLanguageKey, // Save lang key for easier querying if needed
+                        langKey: currentLanguageKey, 
                         lastPlayed: serverTimestamp() 
                     });
                      console.log("New score record created in Firestore.");
                 }
-                return newBest; // Return if it was a new best score
+                return newBest; 
             } catch (error) {
                 console.error("Error saving score:", error);
                 alertUser(`Error saving score: ${error.message}. Your score might not have been saved.`);
@@ -372,11 +414,9 @@
             currentScore = 0;
             currentWordIndex = 0;
             const allWordsForLanguage = wordsData[currentLanguageKey].list;
-            
-            // Ensure there are enough words for the game, otherwise use all available.
             const wordsToPlayCount = Math.min(WORDS_PER_GAME, allWordsForLanguage.length);
             if (allWordsForLanguage.length < WORDS_PER_GAME) {
-                console.warn(`Not enough words for ${wordsData[currentLanguageKey].name} (needed ${WORDS_PER_GAME}, got ${allWordsForLanguage.length}). Using all available words.`);
+                console.warn(`Not enough words for ${wordsData[currentLanguageKey].name}. Using all available words.`);
             }
             gameWords = shuffleArray([...allWordsForLanguage]).slice(0, wordsToPlayCount); 
             
@@ -414,9 +454,6 @@
             nextWordBtn.classList.add('hidden');
             speakWordBtn.disabled = false;
             repeatWordBtn.disabled = false;
-
-            // Automatically speak the word
-            // A small delay can sometimes help ensure the voice is ready, especially on first load or after voice changes
             setTimeout(() => {
                 speakWord(currentWordToSpell, wordsData[currentLanguageKey].langCode);
             }, 100);
@@ -433,7 +470,6 @@
             repeatWordBtn.disabled = true;
             spellInput.disabled = true;
 
-
             if (userAnswer === correctAnswer) {
                 currentScore++;
                 feedbackArea.textContent = "Correct!";
@@ -449,7 +485,6 @@
                 nextWordBtn.classList.remove('hidden');
                 nextWordBtn.focus();
             } else {
-                // Delay end game slightly to allow user to see feedback
                 setTimeout(endGame, 1000); 
             }
         }
@@ -462,7 +497,6 @@
             repeatWordBtn.disabled = true;
 
             finalScoreDisplay.textContent = `${currentScore} / ${gameWords.length}`;
-            
             const newBest = await saveScore(); 
 
             if (newBest) {
@@ -474,7 +508,6 @@
                 gameOverBestScoreInfo.className = 'text-slate-600';
                 gameOverTitle.textContent = "Game Over!";
             }
-            
             gameOverModal.classList.remove('hidden');
         }
         
@@ -487,24 +520,6 @@
             playGameBtn.classList.remove('custom-btn-primary');
             languageSelect.value = "";
             currentLanguageKey = "";
-        }
-
-        function alertUser(message) {
-            console.warn("ALERT USER:", message);
-            // Simple non-blocking alert at the top of the screen
-            let alertBox = document.getElementById('customAlertBox');
-            if (!alertBox) {
-                alertBox = document.createElement('div');
-                alertBox.id = 'customAlertBox';
-                alertBox.style.cssText = "position:fixed; top:10px; left:50%; transform:translateX(-50%); background-color:rgba(239, 68, 68, 0.9); color:white; padding:12px 20px; border-radius:8px; z-index:1001; box-shadow: 0 4px 6px rgba(0,0,0,0.1); font-size: 0.9rem; transition: opacity 0.5s ease-out;";
-                document.body.appendChild(alertBox);
-            }
-            alertBox.textContent = message;
-            alertBox.style.opacity = '1';
-            setTimeout(() => {
-                alertBox.style.opacity = '0';
-                setTimeout(() => { if(alertBox.parentNode) alertBox.parentNode.removeChild(alertBox) }, 500);
-            }, 5000);
         }
 
         // Event Listeners
@@ -523,10 +538,8 @@
 
         playGameBtn.addEventListener('click', () => {
             if (currentLanguageKey) {
-                // Ensure voices are loaded before starting game, especially if user clicks quickly
                 if (voices.length === 0) {
-                    loadVoices(); // Attempt to load again
-                    // A brief delay might be necessary if voices are still loading
+                    loadVoices(); 
                     setTimeout(() => startGame(), 250); 
                 } else {
                     startGame();
@@ -553,7 +566,6 @@
         });
 
         nextWordBtn.addEventListener('click', displayNextWord);
-
         changeLangBtn.addEventListener('click', showLanguageSelectionScreen);
         modalChangeLangBtn.addEventListener('click', showLanguageSelectionScreen);
         playAgainBtn.addEventListener('click', () => {
@@ -561,8 +573,6 @@
             startGame(); 
         });
 
-
-        // Initialize
         async function main() {
             loadingIndicator.classList.remove('hidden');
             appContainer.classList.add('hidden');
@@ -572,10 +582,12 @@
                 console.warn("Firebase not fully initialized due to missing config. Scores will not be saved.");
             }
             
+            // Only proceed to show app if firebase is ready (or if it's intentionally disabled but game can run without scores)
+            // In this version, if firebaseReady is false due to missing config, the loadingIndicator shows the error and stops.
+            if (!firebaseReady) return; // Stop further execution if critical Firebase setup failed
+
             populateLanguageSelect();
-            // Initial call to load voices
             loadVoices(); 
-            // Browsers like Chrome sometimes need onvoiceschanged to be set up to populate the list.
             if (synth && synth.onvoiceschanged !== undefined && voices.length === 0) {
                 synth.onvoiceschanged = loadVoices;
             }
