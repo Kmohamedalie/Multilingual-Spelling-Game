@@ -51,7 +51,7 @@
 
     <div id="userIdDisplay" class="hidden">User ID: <span id="userIdValue"></span></div>
 
-    <div id="loadingIndicator" class="text-center p-10 w-full">
+    <div id="loadingIndicator" class="text-center p-10">
         <svg class="animate-spin h-10 w-10 text-sky-600 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
             <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
@@ -162,13 +162,13 @@
         const userIdValue = document.getElementById('userIdValue');
 
         // Game Configuration
-        const WORDS_PER_GAME = 15; 
+        const WORDS_PER_GAME = 10;
         const wordsData = {
-            en: { name: "English", langCode: "en-US", list: ["apple", "banana", "computer", "elephant", "guitar", "language", "mountain", "ocean", "programming", "sunshine", "beautiful", "adventure", "knowledge", "restaurant", "calendar", "technology", "environment", "communication", "opportunity", "experience", "vocabulary", "dictionary", "umbrella", "vacation", "celebration"] },
-            es: { name: "Español", langCode: "es-ES", list: ["manzana", "plátano", "computadora", "elefante", "guitarra", "idioma", "montaña", "océano", "programación", "sol", "hermoso", "aventura", "conocimiento", "restaurante", "calendario", "tecnología", "ambiente", "comunicación", "oportunidad", "experiencia", "vocabulario", "diccionario", "paraguas", "vacaciones", "celebración"] },
-            fr: { name: "Français", langCode: "fr-FR", list: ["pomme", "banane", "ordinateur", "éléphant", "guitare", "langue", "montagne", "océan", "programmation", "soleil", "magnifique", "aventure", "connaissance", "restaurant", "calendrier", "technologie", "environnement", "communication", "opportunité", "expérience", "vocabulaire", "dictionnaire", "parapluie", "vacances", "célébration"] },
-            de: { name: "Deutsch", langCode: "de-DE", list: ["Apfel", "Banane", "Computer", "Elefant", "Gitarre", "Sprache", "Berg", "Ozean", "Programmierung", "Sonnenschein", "wunderschön", "Abenteuer", "Wissen", "Restaurant", "Kalender", "Technologie", "Umwelt", "Kommunikation", "Gelegenheit", "Erfahrung", "Wortschatz", "Wörterbuch", "Regenschirm", "Urlaub", "Feier"] },
-            it: { name: "Italiano", langCode: "it-IT", list: ["mela", "banana", "computer", "elefante", "chitarra", "lingua", "montagna", "oceano", "programmazione", "sole", "bellissimo", "avventura", "conoscenza", "ristorante", "calendario", "tecnologia", "ambiente", "comunicazione", "opportunità", "esperienza", "vocabolario", "dizionario", "ombrello", "vacanza", "celebrazione"] }
+            en: { name: "English", langCode: "en-US", list: ["apple", "banana", "computer", "elephant", "guitar", "language", "mountain", "ocean", "programming", "sunshine", "beautiful", "adventure", "knowledge", "restaurant", "calendar", "technology", "environment", "communication", "opportunity", "experience"] },
+            es: { name: "Español", langCode: "es-ES", list: ["manzana", "plátano", "computadora", "elefante", "guitarra", "idioma", "montaña", "océano", "programación", "sol", "hermoso", "aventura", "conocimiento", "restaurante", "calendario", "tecnología", "ambiente", "comunicación", "oportunidad", "experiencia"] },
+            fr: { name: "Français", langCode: "fr-FR", list: ["pomme", "banane", "ordinateur", "éléphant", "guitare", "langue", "montagne", "océan", "programmation", "soleil", "magnifique", "aventure", "connaissance", "restaurant", "calendrier", "technologie", "environnement", "communication", "opportunité", "expérience"] },
+            de: { name: "Deutsch", langCode: "de-DE", list: ["Apfel", "Banane", "Computer", "Elefant", "Gitarre", "Sprache", "Berg", "Ozean", "Programmierung", "Sonnenschein", "wunderschön", "Abenteuer", "Wissen", "Restaurant", "Kalender", "Technologie", "Umwelt", "Kommunikation", "Gelegenheit", "Erfahrung"] },
+            it: { name: "Italiano", langCode: "it-IT", list: ["mela", "banana", "computer", "elefante", "chitarra", "lingua", "montagna", "oceano", "programmazione", "sole", "bellissimo", "avventura", "conoscenza", "ristorante", "calendario", "tecnologia", "ambiente", "comunicazione", "opportunità", "esperienza"] }
         };
 
         // Game State
@@ -185,58 +185,13 @@
         let db, auth, userId, app;
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-spelling-game';
 
-        function alertUser(message) {
-            console.warn("ALERT USER:", message);
-            let alertBox = document.getElementById('customAlertBox');
-            if (!alertBox) {
-                alertBox = document.createElement('div');
-                alertBox.id = 'customAlertBox';
-                alertBox.className = "fixed top-3 left-1/2 -translate-x-1/2 bg-red-600 bg-opacity-90 text-white px-5 py-3 rounded-lg shadow-lg text-sm z-[1001] transition-opacity duration-500 ease-out opacity-0";
-                document.body.appendChild(alertBox);
-            }
-            alertBox.textContent = message;
-            
-            requestAnimationFrame(() => {
-                alertBox.classList.remove('opacity-0');
-                alertBox.classList.add('opacity-100');
-            });
-
-            if (alertBox.hideTimeout) clearTimeout(alertBox.hideTimeout);
-            if (alertBox.removeTimeout) clearTimeout(alertBox.removeTimeout);
-
-            alertBox.hideTimeout = setTimeout(() => {
-                alertBox.classList.remove('opacity-100');
-                alertBox.classList.add('opacity-0');
-                alertBox.removeTimeout = setTimeout(() => {
-                    if (alertBox.parentNode) {
-                        alertBox.parentNode.removeChild(alertBox);
-                    }
-                }, 500); 
-            }, 5000);
-        }
-
-
         async function initFirebase() {
             try {
                 const firebaseConfigStr = typeof __firebase_config !== 'undefined' ? __firebase_config : null;
                 if (!firebaseConfigStr) {
                     console.error("Firebase config not found.");
                     alertUser("Critical Error: Firebase configuration is missing. The game cannot save scores.");
-                    loadingIndicator.innerHTML = `
-                        <div class="bg-red-100 border-l-4 border-red-500 text-red-700 p-6 rounded-md shadow-md w-full max-w-lg mx-auto">
-                            <div class="flex items-center">
-                                <div class="flex-shrink-0">
-                                    <svg class="h-10 w-10 text-red-500 mr-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                                    </svg>
-                                </div>
-                                <div class="text-left">
-                                    <p class="font-bold text-xl mb-1">Critical Application Error</p>
-                                    <p class="text-md">The game cannot start correctly because essential configuration (Firebase) is missing.</p>
-                                    <p class="text-sm mt-2 text-slate-600">Scores and progress cannot be saved. If you are seeing this on a platform, please report it. If running locally, ensure Firebase is configured.</p>
-                                </div>
-                            </div>
-                        </div>`;
+                    loadingIndicator.innerHTML = "<p class='text-red-500'>Error: Firebase config missing. Scores cannot be saved.</p>";
                     return false;
                 }
                 const firebaseConfig = JSON.parse(firebaseConfigStr);
@@ -244,15 +199,16 @@
                 app = initializeApp(firebaseConfig);
                 db = getFirestore(app);
                 auth = getAuth(app);
-                setLogLevel('debug'); 
+                setLogLevel('debug'); // For Firebase Firestore logging
 
-                await setPersistence(auth, browserLocalPersistence); 
+                await setPersistence(auth, browserLocalPersistence); // Persist auth state
 
                 return new Promise((resolve) => {
                     onAuthStateChanged(auth, async (user) => {
                         if (user) {
                             userId = user.uid;
                         } else {
+                            // If no user, try to sign in with custom token or anonymously
                             if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
                                 await signInWithCustomToken(auth, __initial_auth_token);
                                 userId = auth.currentUser?.uid;
@@ -261,7 +217,7 @@
                                 userId = auth.currentUser?.uid;
                             }
                         }
-                        if (!userId) userId = crypto.randomUUID(); 
+                        if (!userId) userId = crypto.randomUUID(); // Fallback if all else fails
 
                         userIdValue.textContent = userId;
                         userIdDisplay.classList.remove('hidden');
@@ -273,21 +229,7 @@
             } catch (error) {
                 console.error("Firebase initialization error:", error);
                 alertUser(`Firebase Error: ${error.message}. Scores might not be saved.`);
-                loadingIndicator.innerHTML = `
-                    <div class="bg-red-100 border-l-4 border-red-500 text-red-700 p-6 rounded-md shadow-md w-full max-w-lg mx-auto">
-                        <div class="flex items-center">
-                            <div class="flex-shrink-0">
-                                <svg class="h-10 w-10 text-red-500 mr-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                                </svg>
-                            </div>
-                            <div class="text-left">
-                                <p class="font-bold text-xl mb-1">Firebase Initialization Error</p>
-                                <p class="text-md">${error.message}</p>
-                                <p class="text-sm mt-2 text-slate-600">Scores and progress might not be saved correctly.</p>
-                            </div>
-                        </div>
-                    </div>`;
+                loadingIndicator.innerHTML = `<p class='text-red-500'>Error initializing Firebase: ${error.message}. Scores may not save.</p>`;
                 return false;
             }
         }
@@ -316,19 +258,22 @@
                 return;
             }
             if (synth.speaking) {
-                synth.cancel();
+                synth.cancel(); // Cancel previous speech if any
             }
             
             const utterance = new SpeechSynthesisUtterance(word);
+            // Try to find a voice for the specific language code
             let voice = voices.find(v => v.lang === langCode);
-            if (!voice) voice = voices.find(v => v.lang.startsWith(langCode.split('-')[0]));
-            if (!voice && voices.length > 0) {
-                const baseLang = langCode.split('-')[0];
-                voice = voices.find(v => v.lang.startsWith(baseLang) && v.default);
-                if (!voice) voice = voices.find(v => v.lang.startsWith(baseLang));
+            // If not found, try to find a voice for the base language (e.g., 'en' for 'en-US')
+            if (!voice) {
+                voice = voices.find(v => v.lang.startsWith(langCode.split('-')[0]));
             }
-
-            if (voice) utterance.voice = voice;
+            if (voice) {
+                utterance.voice = voice;
+            } else {
+                console.warn(`No voice found for language: ${langCode}. Using default.`);
+                 // We still set the lang property on utterance, browser might pick a suitable default
+            }
             utterance.lang = langCode; 
             utterance.pitch = 1;
             utterance.rate = 0.9;
@@ -336,7 +281,7 @@
             utterance.onerror = (event) => {
                 console.error('SpeechSynthesisUtterance.onerror', event);
                 alertUser(`Could not speak the word. Error: ${event.error}. Please try again or check your browser's speech settings.`);
-                 feedbackArea.textContent = `Error speaking word. Try typing: ${word}`; 
+                 feedbackArea.textContent = `Error speaking word. Try typing: ${word}`; // Fallback
                  feedbackArea.className = 'feedback-incorrect';
             };
             synth.speak(utterance);
@@ -357,7 +302,7 @@
                 }
             } catch (error) {
                 console.error("Error loading best score:", error);
-                currentBestScore = 0; 
+                currentBestScore = 0; // Default on error
                 alertUser("Could not load your best score for this language.");
             }
             bestScoreDisplay.textContent = currentBestScore;
@@ -377,24 +322,20 @@
 
             const scoreRef = doc(db, `artifacts/${appId}/users/${userId}/spellingGameScores/${currentLanguageKey}`);
             try {
+                // Use setDoc with merge true to create or update.
+                // Or check if doc exists then update, else set. For simplicity, setDoc with merge.
+                // Actually, to ensure we only update if it's a new best or create if not exists:
                 const docSnap = await getDoc(scoreRef);
                 if (docSnap.exists()) {
-                    if (currentScore > (docSnap.data().bestScore || 0) ) { 
+                    if (currentScore > (docSnap.data().bestScore || 0) ) {
                          await updateDoc(scoreRef, { bestScore: currentScore, lastPlayed: serverTimestamp() });
                          console.log("Best score updated in Firestore.");
-                    } else if (!docSnap.data().lastPlayed) { 
-                        await updateDoc(scoreRef, { lastPlayed: serverTimestamp() });
                     }
                 } else {
-                     await setDoc(scoreRef, { 
-                        bestScore: currentScore, 
-                        language: wordsData[currentLanguageKey].name, 
-                        langKey: currentLanguageKey, 
-                        lastPlayed: serverTimestamp() 
-                    });
-                     console.log("New score record created in Firestore.");
+                     await setDoc(scoreRef, { bestScore: currentScore, language: wordsData[currentLanguageKey].name, lastPlayed: serverTimestamp() });
+                     console.log("New score saved in Firestore.");
                 }
-                return newBest; 
+                return newBest; // Return if it was a new best score
             } catch (error) {
                 console.error("Error saving score:", error);
                 alertUser(`Error saving score: ${error.message}. Your score might not have been saved.`);
@@ -413,15 +354,11 @@
         function startGame() {
             currentScore = 0;
             currentWordIndex = 0;
-            const allWordsForLanguage = wordsData[currentLanguageKey].list;
-            const wordsToPlayCount = Math.min(WORDS_PER_GAME, allWordsForLanguage.length);
-            if (allWordsForLanguage.length < WORDS_PER_GAME) {
-                console.warn(`Not enough words for ${wordsData[currentLanguageKey].name}. Using all available words.`);
-            }
-            gameWords = shuffleArray([...allWordsForLanguage]).slice(0, wordsToPlayCount); 
+            const allWords = wordsData[currentLanguageKey].list;
+            gameWords = shuffleArray([...allWords]).slice(0, WORDS_PER_GAME); // Take 10 random words
             
             if (gameWords.length === 0) {
-                alertUser("No words available for this language. Please select another language or add more words.");
+                alertUser("No words available for this language. Please select another language.");
                 showLanguageSelectionScreen();
                 return;
             }
@@ -449,14 +386,13 @@
             feedbackArea.textContent = '';
             feedbackArea.className = '';
             submitAnswerBtn.disabled = false;
-            submitAnswerBtn.classList.remove('custom-btn-secondary', 'opacity-50', 'cursor-not-allowed');
-            submitAnswerBtn.classList.add('custom-btn-primary');
+            submitAnswerBtn.classList.replace('custom-btn-secondary', 'custom-btn-primary');
             nextWordBtn.classList.add('hidden');
             speakWordBtn.disabled = false;
             repeatWordBtn.disabled = false;
-            setTimeout(() => {
-                speakWord(currentWordToSpell, wordsData[currentLanguageKey].langCode);
-            }, 100);
+
+            // Automatically speak the word
+            speakWord(currentWordToSpell, wordsData[currentLanguageKey].langCode);
         }
 
         function checkAnswer() {
@@ -464,11 +400,11 @@
             const correctAnswer = currentWordToSpell.toLowerCase();
 
             submitAnswerBtn.disabled = true;
-            submitAnswerBtn.classList.add('custom-btn-secondary', 'opacity-50', 'cursor-not-allowed');
-            submitAnswerBtn.classList.remove('custom-btn-primary');
-            speakWordBtn.disabled = true; 
+            submitAnswerBtn.classList.replace('custom-btn-primary', 'custom-btn-secondary');
+            speakWordBtn.disabled = true; // Disable speak while feedback is shown
             repeatWordBtn.disabled = true;
             spellInput.disabled = true;
+
 
             if (userAnswer === correctAnswer) {
                 currentScore++;
@@ -485,7 +421,7 @@
                 nextWordBtn.classList.remove('hidden');
                 nextWordBtn.focus();
             } else {
-                setTimeout(endGame, 1000); 
+                endGame();
             }
         }
 
@@ -497,17 +433,19 @@
             repeatWordBtn.disabled = true;
 
             finalScoreDisplay.textContent = `${currentScore} / ${gameWords.length}`;
-            const newBest = await saveScore(); 
+            
+            const newBest = await saveScore(); // Save score and check if it's a new best
 
             if (newBest) {
                 gameOverBestScoreInfo.textContent = `🎉 New Best Score for ${wordsData[currentLanguageKey].name}!`;
-                gameOverBestScoreInfo.className = 'text-green-600 font-semibold text-xl';
+                gameOverBestScoreInfo.className = 'text-green-600 font-semibold';
                 gameOverTitle.textContent = "Excellent!";
             } else {
                 gameOverBestScoreInfo.textContent = `Your best score for ${wordsData[currentLanguageKey].name} is ${currentBestScore}. Keep practicing!`;
                 gameOverBestScoreInfo.className = 'text-slate-600';
                 gameOverTitle.textContent = "Game Over!";
             }
+            
             gameOverModal.classList.remove('hidden');
         }
         
@@ -516,10 +454,25 @@
             gameOverModal.classList.add('hidden');
             languageSelectionScreen.classList.remove('hidden');
             playGameBtn.disabled = true;
-            playGameBtn.classList.add('custom-btn-secondary', 'opacity-50', 'cursor-not-allowed');
-            playGameBtn.classList.remove('custom-btn-primary');
             languageSelect.value = "";
             currentLanguageKey = "";
+        }
+
+        function alertUser(message) {
+            // A more sophisticated modal could be used here instead of alert
+            // For now, using a simple feedback area if available, or console.
+            console.warn("ALERT USER:", message);
+            if (feedbackArea && feedbackArea.classList.contains('hidden') === false) {
+                 feedbackArea.textContent = message;
+                 feedbackArea.className = 'feedback-incorrect p-2 rounded bg-red-100';
+            } else {
+                // If game screen isn't active, this is a fallback
+                const tempAlert = document.createElement('div');
+                tempAlert.textContent = message;
+                tempAlert.style.cssText = "position:fixed; top:10px; left:50%; transform:translateX(-50%); background-color:red; color:white; padding:10px; border-radius:5px; z-index:1000;";
+                document.body.appendChild(tempAlert);
+                setTimeout(() => tempAlert.remove(), 5000);
+            }
         }
 
         // Event Listeners
@@ -527,23 +480,16 @@
             if (e.target.value) {
                 currentLanguageKey = e.target.value;
                 playGameBtn.disabled = false;
-                playGameBtn.classList.remove('custom-btn-secondary', 'opacity-50', 'cursor-not-allowed');
-                playGameBtn.classList.add('custom-btn-primary');
+                playGameBtn.classList.replace('custom-btn-secondary', 'custom-btn-primary');
             } else {
                 playGameBtn.disabled = true;
-                playGameBtn.classList.add('custom-btn-secondary', 'opacity-50', 'cursor-not-allowed');
-                playGameBtn.classList.remove('custom-btn-primary');
+                 playGameBtn.classList.replace('custom-btn-primary', 'custom-btn-secondary');
             }
         });
 
         playGameBtn.addEventListener('click', () => {
             if (currentLanguageKey) {
-                if (voices.length === 0) {
-                    loadVoices(); 
-                    setTimeout(() => startGame(), 250); 
-                } else {
-                    startGame();
-                }
+                startGame();
             }
         });
         
@@ -566,35 +512,39 @@
         });
 
         nextWordBtn.addEventListener('click', displayNextWord);
+
         changeLangBtn.addEventListener('click', showLanguageSelectionScreen);
         modalChangeLangBtn.addEventListener('click', showLanguageSelectionScreen);
         playAgainBtn.addEventListener('click', () => {
             gameOverModal.classList.add('hidden');
-            startGame(); 
+            startGame(); // Restart with the same language
         });
 
+
+        // Initialize
         async function main() {
             loadingIndicator.classList.remove('hidden');
             appContainer.classList.add('hidden');
 
             const firebaseReady = await initFirebase();
             if (!firebaseReady && (typeof __firebase_config === 'undefined' || typeof __app_id === 'undefined')) {
+                // If Firebase essential globals are missing, we might not want to proceed or show a limited version.
+                // For now, the error is shown in initFirebase.
+                // We can still let the game run without Firebase for non-persistent play if desired.
                 console.warn("Firebase not fully initialized due to missing config. Scores will not be saved.");
+                // Optionally, disable features that require Firebase or inform user.
+                // For this example, we'll proceed but score saving won't work.
             }
             
-            // Only proceed to show app if firebase is ready (or if it's intentionally disabled but game can run without scores)
-            // In this version, if firebaseReady is false due to missing config, the loadingIndicator shows the error and stops.
-            if (!firebaseReady) return; // Stop further execution if critical Firebase setup failed
-
             populateLanguageSelect();
-            loadVoices(); 
-            if (synth && synth.onvoiceschanged !== undefined && voices.length === 0) {
+            loadVoices(); // Load voices for speech synthesis
+            if (synth && synth.onvoiceschanged !== undefined) { // Ensure voices are loaded
                 synth.onvoiceschanged = loadVoices;
             }
             
             loadingIndicator.classList.add('hidden');
             appContainer.classList.remove('hidden');
-            showLanguageSelectionScreen(); 
+            showLanguageSelectionScreen(); // Start with language selection
         }
 
         main();
